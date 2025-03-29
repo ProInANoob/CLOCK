@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"name": "Button2",
+			"path": "../platIO/Button2/Button2"
+		}
+	],
+	"settings": {}
+}
