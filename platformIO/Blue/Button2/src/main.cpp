@@ -5,22 +5,18 @@
 #include <WiFiServer.h>
 #include <WiFiUdp.h>
 
-#define TAPOUT_PIN 10
+#define TAPOUT_PIN 10 // note - when compiling on a deki, these will not work, go to 14 -15, rather than 10 -11
 #define READY_PIN 11
 #define NUMPIXELS 30  // Number of LEDs in strip
 #define DATA_PIN 12
 #define CLOCK_PIN 13
 Adafruit_DotStar strip(NUMPIXELS, DATA_PIN, CLOCK_PIN, DOTSTAR_RGB);
 
-const char *ssid = "RobobrawlButton";
-const char *password = "doyourobotics";
+const char *ssid = "tacotaco";
+const char *password = "tacotaco";
 
-//IPAddress local_ip(192, 168, 0, 1);
-//IPAddress gateway(192, 168, 0, 1);
-//IPAddress subnet(255, 255, 255, 0);
-//
-//WebServer server(80);
-
+const char * udpAddress = "224.1.1.1";
+const int udpPort = 5006;
 
 //wifi
 WiFiUDP udp;
@@ -84,12 +80,14 @@ void setStrip(Mode color) {
 
 
 
-void connectToWiFi(const char * ssid, const char * pwd) {
+void connectToWiFi(const char * ssid, const char * pwd){
   Serial.println("Connecting to WiFi network: " + String(ssid));
+
   // delete old config
   WiFi.disconnect(true);
   //register event handler
   WiFi.onEvent(WiFiEvent);
+  
   //Initiate connection
   WiFi.begin(ssid, pwd);
 
@@ -98,22 +96,50 @@ void connectToWiFi(const char * ssid, const char * pwd) {
 
 //wifi event handler
 void WiFiEvent(WiFiEvent_t event) {
+  Serial.printf("[WiFi-event] event: %d\n", event);
+
   switch (event) {
-    case SYSTEM_EVENT_STA_GOT_IP:
-      //When connected set
-      Serial.print("WiFi connected! IP address: ");
+    case ARDUINO_EVENT_WIFI_READY:               Serial.println("WiFi interface ready"); break;
+    case ARDUINO_EVENT_WIFI_SCAN_DONE:           Serial.println("Completed scan for access points"); break;
+    case ARDUINO_EVENT_WIFI_STA_START:           Serial.println("WiFi client started"); break;
+    case ARDUINO_EVENT_WIFI_STA_STOP:            Serial.println("WiFi clients stopped"); break;
+    case ARDUINO_EVENT_WIFI_STA_CONNECTED:       Serial.println("Connected to access point"); break;
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:    Serial.println("Disconnected from WiFi access point"); break;
+    case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE: Serial.println("Authentication mode of access point has changed"); break;
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      Serial.print("Obtained IP address: ");
       Serial.println(WiFi.localIP());
-      udp.beginMulticast(IPAddress(224, 1, 1, 1), 5009); //libmapper admin bus multicast ----------- look at the port for this, make sure its right.
-      //udp.begin(7000); //test regular UDP server endpoint
-      connected = true;
+      udp.beginMulticast(IPAddress(244, 1, 1, 1), 5008);
       break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-      Serial.println("WiFi lost connection");
-      WiFi.begin(ssid, password);
-      connected = false;
-      break;
+    case ARDUINO_EVENT_WIFI_STA_LOST_IP:        Serial.println("Lost IP address and IP address is reset to 0"); break;
+    case ARDUINO_EVENT_WPS_ER_SUCCESS:          Serial.println("WiFi Protected Setup (WPS): succeeded in enrollee mode"); break;
+    case ARDUINO_EVENT_WPS_ER_FAILED:           Serial.println("WiFi Protected Setup (WPS): failed in enrollee mode"); break;
+    case ARDUINO_EVENT_WPS_ER_TIMEOUT:          Serial.println("WiFi Protected Setup (WPS): timeout in enrollee mode"); break;
+    case ARDUINO_EVENT_WPS_ER_PIN:              Serial.println("WiFi Protected Setup (WPS): pin code in enrollee mode"); break;
+    case ARDUINO_EVENT_WIFI_AP_START:           Serial.println("WiFi access point started"); break;
+    case ARDUINO_EVENT_WIFI_AP_STOP:            Serial.println("WiFi access point  stopped"); break;
+    case ARDUINO_EVENT_WIFI_AP_STACONNECTED:    Serial.println("Client connected"); break;
+    case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED: Serial.println("Client disconnected"); break;
+    case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:   Serial.println("Assigned IP address to client"); break;
+    case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:  Serial.println("Received probe request"); break;
+    case ARDUINO_EVENT_WIFI_AP_GOT_IP6:         Serial.println("AP IPv6 is preferred"); break;
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP6:        Serial.println("STA IPv6 is preferred"); break;
+    case ARDUINO_EVENT_ETH_GOT_IP6:             Serial.println("Ethernet IPv6 is preferred"); break;
+    case ARDUINO_EVENT_ETH_START:               Serial.println("Ethernet started"); break;
+    case ARDUINO_EVENT_ETH_STOP:                Serial.println("Ethernet stopped"); break;
+    case ARDUINO_EVENT_ETH_CONNECTED:           Serial.println("Ethernet connected"); break;
+    case ARDUINO_EVENT_ETH_DISCONNECTED:        Serial.println("Ethernet disconnected"); break;
+    case ARDUINO_EVENT_ETH_GOT_IP:              Serial.println("Obtained IP address"); break;
+    default:                                    break;
   }
 }
+
+void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info) {
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(IPAddress(info.got_ip.ip_info.ip.addr));
+}
+
 
 struct  recieveData
 {
@@ -152,9 +178,36 @@ void send(){
 
 
 void setup() {
+  setup() {
   Serial.begin(115200);
-  connectToWiFi(ssid, password);
 
+  // delete old config
+  WiFi.disconnect(true);
+
+  delay(1000);
+
+  // Examples of different ways to register wifi events;
+  // these handlers will be called from another thread.
+  WiFi.onEvent(WiFiEvent);
+  WiFi.onEvent(WiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
+  WiFiEventId_t eventID = WiFi.onEvent(
+    [](WiFiEvent_t event, WiFiEventInfo_t info) {
+      Serial.print("WiFi lost connection. Reason: ");
+      Serial.println(info.wifi_sta_disconnected.reason);
+    },
+    WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED
+  );
+
+  // Remove WiFi event
+  Serial.print("WiFi Event ID: ");
+  Serial.println(eventID);
+  // WiFi.removeEvent(eventID);
+
+  WiFi.begin(ssid, password);
+
+  Serial.println();
+  Serial.println();
+  Serial.println("Wait for WiFi... ");
 
   pinMode(TAPOUT_PIN, INPUT_PULLDOWN);
   pinMode(READY_PIN, INPUT_PULLDOWN);
@@ -163,25 +216,11 @@ void setup() {
   strip.setBrightness(150);
   strip.show();
 
-
-  clock_outgoing.bothReady = 0;
-  clock_outgoing.blueTapout = 0;
-  clock_outgoing.orangeTapout = 0;
-  clock_outgoing.reset = 0;
-
-
-
-
-  // Register for a callback function that will be called when data is received
-
-  delay(100);
-  // I dont think any of this will matter, but im scared
-
 }
 
 float last_mill = 0;
 
-long timerVal = millis()
+long timerVal = millis();
 
 void loop() {
 
@@ -242,7 +281,7 @@ void loop() {
       //Serial.println(" ");
       rec_data.tap_ack  = buf[1]?1:0;
       rec_data.main_ack = buf[0]?1:0;
-      rec_data.color  = buf[2];
+      rec_data.color  = buf[2]; // its are gonna be wierrrd cauyse singhs that dont realy transfer welllll...
       rec_data.color += buf[3] << 8;
       rec_data.color += buf[4] << 16;
       rec_data.color += buf[5] << 24;
@@ -255,7 +294,7 @@ void loop() {
       }
 
 
-      // NOTE::: 0-4 will be the from ID when I send thesesese. 
+      // NOTE::: 0-4 will be the from ID when I send thesesese. (as in when this ide sends somehting I thunk)
     }
     
 
@@ -295,98 +334,5 @@ void loop() {
   if(millis() - timerVal > 100){
     send();
   }
-
-}
-void handle_OnConnect() {
-  server.send(200, "text/html", SendHTML());
-}
-void handle_IdentifyTeams() {
-  setStrip(Mode::orange);
-  outgoingValues.ready = 0;
-  outgoingValues.tapout = 0;
-  outgoingValues.mode = Mode::blue;
-  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&outgoingValues, sizeof(outgoingValues));
-
-  if (result != ESP_OK) {
-    Serial.println("Error sending data");
-  }
-
-  server.send(200, "text/html", SendHTML());
-}
-void handle_ResetMatch() {
-  orangeReady = 0;
-  orangeTapout = 0;
-  blueReady = 0;
-  blueTapout = 0;
-
-  setStrip(Mode::orange);
-
-  clock_outgoing.bothReady = orangeReady && blueReady;
-  clock_outgoing.blueTapout = blueTapout;
-  clock_outgoing.orangeTapout = orangeTapout;
-  clock_outgoing.reset = 1;
-  sendESPNOWclock(); 
-  sendESPNOW(0, 0, Mode::blue);
-
-  server.send(200, "text/html", SendHTML());
-  delay(200);
-  clock_outgoing.reset = 0;
-
-
-}
-void handle_OrangeWin() {
-  setStrip(Mode::green);
-  sendESPNOW(0, 0, Mode::red);
-  clock_outgoing.blueTapout = 1;
-  blueTapout = 1;
-  sendESPNOWclock();
-  server.send(200, "text/html", SendHTML());
-}
-void handle_BlueWin() {
-  setStrip(Mode::red);
-  sendESPNOW(0, 0, Mode::green);
-
-  orangeTapout = 1;
-  clock_outgoing.orangeTapout = 1;
-  sendESPNOWclock();
-
-  server.send(200, "text/html", SendHTML());
-}
-
-void handle_OrangeStatus() {
-  String returnVal = "NOT READY";
-  if (orangeReady) {
-    returnVal = "READY";
-  }
-  if (orangeTapout) {
-    returnVal = "TAPOUT";
-  }
-  server.send(200, "text/plane", returnVal);
-}
-void handle_BlueStatus() {
-  String returnVal = "NOT READY";
-  if (blueReady) {
-    returnVal = "READY";
-  }
-  if (blueTapout) {
-    returnVal = "TAPOUT";
-  }
-  server.send(200, "text/plane", returnVal);
-}
-void handle_NotFound() {
-  server.send(404, "text/plain", "Not found");
-}
-
-void handle_startClock() {
-  // IDK waht to do to start it, or if I shjould do a ready check or ewhattttt, 
-  if(orangeReady && blueReady){
-    clock_outgoing.bothReady = 1;
-    sendESPNOWclock();
-
-  }
-  else{
-    Serial.print("start clock pressed but both not ready");
-  }
-
 
 }

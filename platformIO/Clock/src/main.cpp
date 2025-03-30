@@ -16,9 +16,16 @@
 
 
 //wifi
-WiFiUDP udp;
-const char * ssid = "SSID OF NETWORK";
-const char * password = "PASSWORD";
+// WiFi network name and password:
+const char * ssid = "tacotaco";
+const char * password = "tacotaco";
+
+//IP address to send UDP data to:
+// either use the ip address of the server or 
+// a network broadcast address
+const char * udpAddress = "224.1.1.1";
+const int udpPort = 5006;
+
 boolean connected = false;
 
 // coppy vars from message struct
@@ -29,6 +36,7 @@ bool reset = 0;
 
 bool jason = 1;
 
+WiFiUDP udp;
 
 
 //setup espNow peer
@@ -96,63 +104,66 @@ void initMap() {
   TEST_MAP["gear2"] = {92, 93, 94, 95};
 }
 
-void connectToWiFi(const char * ssid, const char * pwd) {
+void connectToWiFi(const char * ssid, const char * pwd){
   Serial.println("Connecting to WiFi network: " + String(ssid));
+
   // delete old config
   WiFi.disconnect(true);
   //register event handler
   WiFi.onEvent(WiFiEvent);
+  
   //Initiate connection
   WiFi.begin(ssid, pwd);
 
   Serial.println("Waiting for WIFI connection...");
 }
 
-
 //wifi event handler
 void WiFiEvent(WiFiEvent_t event) {
+  Serial.printf("[WiFi-event] event: %d\n", event);
+
   switch (event) {
-    case SYSTEM_EVENT_STA_GOT_IP:
-      //When connected set
-      Serial.print("WiFi connected! IP address: ");
+    case ARDUINO_EVENT_WIFI_READY:               Serial.println("WiFi interface ready"); break;
+    case ARDUINO_EVENT_WIFI_SCAN_DONE:           Serial.println("Completed scan for access points"); break;
+    case ARDUINO_EVENT_WIFI_STA_START:           Serial.println("WiFi client started"); break;
+    case ARDUINO_EVENT_WIFI_STA_STOP:            Serial.println("WiFi clients stopped"); break;
+    case ARDUINO_EVENT_WIFI_STA_CONNECTED:       Serial.println("Connected to access point"); break;
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:    Serial.println("Disconnected from WiFi access point"); break;
+    case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE: Serial.println("Authentication mode of access point has changed"); break;
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      Serial.print("Obtained IP address: ");
       Serial.println(WiFi.localIP());
-      udp.beginMulticast(IPAddress(224, 1, 1, 1), 5007); //libmapper admin bus multicast ---------- heres that addresses.
-      //udp.begin(7000); //test regular UDP server endpoint
-      connected = true;
+      udp.beginMulticast(IPAddress(244, 1, 1, 1), 5006);
       break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-      Serial.println("WiFi lost connection");
-      WiFi.begin(ssid, password);
-      connected = false;
-      break;
+    case ARDUINO_EVENT_WIFI_STA_LOST_IP:        Serial.println("Lost IP address and IP address is reset to 0"); break;
+    case ARDUINO_EVENT_WPS_ER_SUCCESS:          Serial.println("WiFi Protected Setup (WPS): succeeded in enrollee mode"); break;
+    case ARDUINO_EVENT_WPS_ER_FAILED:           Serial.println("WiFi Protected Setup (WPS): failed in enrollee mode"); break;
+    case ARDUINO_EVENT_WPS_ER_TIMEOUT:          Serial.println("WiFi Protected Setup (WPS): timeout in enrollee mode"); break;
+    case ARDUINO_EVENT_WPS_ER_PIN:              Serial.println("WiFi Protected Setup (WPS): pin code in enrollee mode"); break;
+    case ARDUINO_EVENT_WIFI_AP_START:           Serial.println("WiFi access point started"); break;
+    case ARDUINO_EVENT_WIFI_AP_STOP:            Serial.println("WiFi access point  stopped"); break;
+    case ARDUINO_EVENT_WIFI_AP_STACONNECTED:    Serial.println("Client connected"); break;
+    case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED: Serial.println("Client disconnected"); break;
+    case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:   Serial.println("Assigned IP address to client"); break;
+    case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:  Serial.println("Received probe request"); break;
+    case ARDUINO_EVENT_WIFI_AP_GOT_IP6:         Serial.println("AP IPv6 is preferred"); break;
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP6:        Serial.println("STA IPv6 is preferred"); break;
+    case ARDUINO_EVENT_ETH_GOT_IP6:             Serial.println("Ethernet IPv6 is preferred"); break;
+    case ARDUINO_EVENT_ETH_START:               Serial.println("Ethernet started"); break;
+    case ARDUINO_EVENT_ETH_STOP:                Serial.println("Ethernet stopped"); break;
+    case ARDUINO_EVENT_ETH_CONNECTED:           Serial.println("Ethernet connected"); break;
+    case ARDUINO_EVENT_ETH_DISCONNECTED:        Serial.println("Ethernet disconnected"); break;
+    case ARDUINO_EVENT_ETH_GOT_IP:              Serial.println("Obtained IP address"); break;
+    default:                                    break;
   }
 }
 
-//void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *data, int data_len) {
-//  //Serial.println("DATATATATTATA");
-//  char macStr[18];
-//  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-//           info->src_addr[0], info->src_addr[1], info->src_addr[2], info->src_addr[3], info->src_addr[4], info->src_addr[5]);
-//  memcpy(&incomingData, data, sizeof(incomingData));
-//  //Serial.print("Last Packet Recv from: ");
-//  //Serial.println(macStr);
-//  //Serial.print("Last Packet Recv Data: ");
-//  //Serial.println(sizeof(incomingData));
-//  //for(int i =0 ; i < sizeof(incomingData); i++){
-//  //  Serial.println(data[i]);
-//  //}
-//  //Serial.print("NOTICEABLE PRINTTTTTTTTTTTTTTTT AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH ");
-//
-//  //Serial.println("");
-//
-//
-//  // data copy
-//  runclock = incomingData.bothReady;
-//  orangeTapout = incomingData.orangeTapout;
-//  blueTapout = incomingData.blueTapout;
-//  reset = incomingData.reset;
-//}
-
+// WARNING: This function is called from a separate FreeRTOS task (thread)!
+void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info) {
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(IPAddress(info.got_ip.ip_info.ip.addr));
+}
 
 void printHi() {
   std::vector<bool> letterH = {false, true, false, true, true, true, true}; 
@@ -197,10 +208,36 @@ void printSLUGS() {
 CRGB leds[NUM_LEDS];
 
 void setup() { 
-  Serial.begin(115200); 
 
-  Serial.println("Wifi Setup");
-  connectToWiFi(ssid, password);
+  Serial.begin(115200);
+
+  // delete old config
+  WiFi.disconnect(true);
+
+  delay(1000);
+
+  // Examples of different ways to register wifi events;
+  // these handlers will be called from another thread.
+  WiFi.onEvent(WiFiEvent);
+  WiFi.onEvent(WiFiGotIP, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
+  WiFiEventId_t eventID = WiFi.onEvent(
+    [](WiFiEvent_t event, WiFiEventInfo_t info) {
+      Serial.print("WiFi lost connection. Reason: ");
+      Serial.println(info.wifi_sta_disconnected.reason);
+    },
+    WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED
+  );
+
+  // Remove WiFi event
+  Serial.print("WiFi Event ID: ");
+  Serial.println(eventID);
+  // WiFi.removeEvent(eventID);
+
+  WiFi.begin(ssid, password);
+
+  Serial.println();
+  Serial.println();
+  Serial.println("Wait for WiFi... ");
 
 
 
@@ -218,6 +255,7 @@ void setup() {
     jason = 1;
   }
 }
+//#REGION clockstuf
 
 void test_1() {
   Serial.println("Blink"); 
@@ -287,7 +325,6 @@ void test_3() {
   }
 }
 
-//#region formting things
 std::vector<int> secondsToMinuteDigits(int seconds) {
     int minutes = seconds / 60;
     int remainingSeconds = (seconds % 60);
@@ -385,7 +422,6 @@ std::string formatIntVector(const std::vector<int>& vec) {
     return result;
 }
 
-//#endregion
 
 void changeNumLed(std::vector<bool> ledVec, std::string name, float seconds) {
   for (int i = 0; i < 7; i++) {
@@ -437,6 +473,7 @@ void testNumber() {
   FastLED.show(); 
   delay(1); 
 }
+//#ENDREGION
 
 
 // just making there here so I dont have to scroll
@@ -595,7 +632,7 @@ void loop() {
   if(millis() - timerVar > 100){
 
   
-    if( recData.blueTapin ){
+    if( recData.readyBlue ){
       for (int i = 0; i < 4; i++) {
         leds[TEST_MAP["gear1"][i-1]] = CRGB::Blue; 
         
@@ -603,7 +640,7 @@ void loop() {
       FastLED.show(); 
       
     }
-    if( recData.orangeTapin ){
+    if( recData.readyOrange ){
       for (int i = 0; i < 4; i++) {
         leds[TEST_MAP["gear2"][i-1]] = CRGB::Orange; 
       }
@@ -616,7 +653,7 @@ void loop() {
       runclock = 0;
       recData.reset = 0;
   
-      // whatever other resting the clock stuffff.. (set black ? or )
+      // whatever other resting the clock stuffff.. (set black ? or ) 
       //send acknak 
       sendData.reset_ack = 1;
       send();
@@ -629,6 +666,7 @@ void loop() {
         sendData.run = runclock;
         send();
         // orange win
+        //whole clock winnigng color. 
       }
       else if (recData.win == -1) {
         runclock = 0;
@@ -644,7 +682,7 @@ void loop() {
     else if (runclock) {
       //Serial.println("AHHHHHHHH RUNNNN");
       
-      state = testIntegration(120.00, recData.pause); 
+      state = testIntegration(120.00, recData.pause); x
       if ( state == 0 ){
         // yellow, 
         // send done,

@@ -56,7 +56,7 @@ class to_button_data():
     def  toBytes( self ):
         raw = struct.pack("<l??", self.color, self.main_ack, self.tap_ack) # wait how endian 0 = ?, 1= =? l = 2:6 ithink.
         return raw
-    
+     
     def assignCol(self, col):
         self.col = col
 
@@ -64,10 +64,11 @@ class to_button_data():
     def send( self ):
         raw = self.toBytes()
         #raw = (raw << 2) + 0x3
+        print("send to button")
         if self.color == 1:
-           self.tx_sock.sendto( raw, (MCAST_GRP, MCAST_PORT_BLUE))
+           self.tx_sock.sendto( raw, (MCAST_GRP, MCAST_PORT_ORANGE))
         else:
-            self.tx_sock.sendto( raw, (MCAST_GRP, MCAST_PORT_ORANGE))
+            self.tx_sock.sendto( raw, (MCAST_GRP, MCAST_PORT_BLUE))
 
 class from_button_data():
     def __init__(self):
