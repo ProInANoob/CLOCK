@@ -18,7 +18,7 @@ Gui = gui.GUI()
 # bool start clock - toggle on an ack from cclock
 # bool reset - another ack toggle.
 # bool pause - this  will just stay for len of pause.
-# int win - 0 = none (when clock is done, should go to yellow, log on clock side), -1 = B, 1 = orange. 
+# int win - 0 = none (when clock is done, should go to yellow, log on clock side), 2 = B, 1 = orange. 
 # bool readyBlue - fro gears, just bool passed form button (sets to green I think)
 # bool readyORANGE - - fro gears, just bool passed form button (sets to green I think)
 # bool orangeTapin - also for gears (set to color), enables button, and idk 
@@ -152,7 +152,7 @@ while not gui.glfw.window_should_close(Gui.window):
         #3pause in gui
         #win can be tapout ( 1= orange win)
         if(fromBlue.tapoutPress ==1 or fromOrange.tapoutPress == 1):
-            toClock.win = 1 if fromBlue.tapoutPress == 1 else -1
+            toClock.win = 1 if fromBlue.tapoutPress == 1 else 2
             if toClock.win == 1:
                 toBlue.tap_ack = True
             else:
@@ -175,8 +175,8 @@ while not gui.glfw.window_should_close(Gui.window):
         
         #TO button stuff? 
         #
-        toBlue.col = -1
-        toOrange.col = -1
+        toBlue.col = 0
+        toOrange.col = 0
         if(blueTapin == 1):
             if(toClock.readyBlue == 1):
                 toBlue.col = 1
@@ -192,7 +192,7 @@ while not gui.glfw.window_should_close(Gui.window):
         if(toClock.win == 1 ):
             toOrange.col = 2
             toBlue.col = 3
-        elif(toClock.win == -1 ):
+        elif(toClock.win == 2 ):
             toOrange.col = 3
             toBlue.col = 2
         # should I put them to somehting other than the ready color when the match starts?

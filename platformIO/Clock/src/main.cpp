@@ -668,7 +668,7 @@ void loop() {
         // orange win
         //whole clock winnigng color. 
       }
-      else if (recData.win == -1) {
+      else if (recData.win == 2) {
         runclock = 0;
         sendData.run = runclock;
         send();  
@@ -682,7 +682,7 @@ void loop() {
     else if (runclock) {
       //Serial.println("AHHHHHHHH RUNNNN");
       
-      state = testIntegration(120.00, recData.pause); x
+      state = testIntegration(120.00, recData.pause); 
       if ( state == 0 ){
         // yellow, 
         // send done,

@@ -49,7 +49,7 @@ class to_button_data():
 
     def __init__( self, tx ):
         self.tx_sock = tx
-        self.color = -1
+        self.color = 0
         self.main_ack = 0
         self.tap_ack = 0
 

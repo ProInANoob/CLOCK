@@ -276,7 +276,7 @@ void loop() {
   switch (rec_data.color)
   {
   case 0:
-    setStrip(yellow);
+    setStrip(yellow); // imcalling this the standby color... 
     break;
   case 1:
     setStrip(green);
