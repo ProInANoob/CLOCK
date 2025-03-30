@@ -14,7 +14,7 @@
 #include <WiFiServer.h>
 #include <WiFiUdp.h>
 
-
+#pragma region inits
 //wifi
 // WiFi network name and password:
 const char * ssid = "tacotaco";
@@ -38,20 +38,6 @@ bool jason = 1;
 
 WiFiUDP udp;
 
-
-//setup espNow peer
-esp_now_peer_info_t peerInfo;
-//def message structure - must match send on button server in layout - not name.
-typedef struct clock_struct_message{
-
-  bool bothReady;
-  bool orangeTapout;
-  bool blueTapout;
-  bool reset;
-
-}clock_struct_message;
-
-clock_struct_message incomingData;
 
 // How many leds in your strip?
 #define NUM_LEDS 95 
@@ -89,7 +75,7 @@ struct SendData
 RecData recData;
 SendData sendData;
 
-
+#pragma endregion inits
 
 void initMap() {
                       // 6, 1, 2, 4, 5, 7, 3
@@ -204,6 +190,20 @@ void printSLUGS() {
   delay(3000); 
 }
 
+void print_Jd_() {
+  std::vector<bool> letterDash = {true, true, true, true, false, true, false}; 
+  std::vector<bool> letterJ = {false, true, true, false, true, false, true}; 
+  std::vector<bool> letterd = {false, true, true, false, true, true, true}; //fix
+
+  changeNumLed(letterDash, "dig4", 100);
+  changeNumLed(letterJ, "dig3", 100); 
+  changeNumLed(letterd, "dig2", 100);
+  changeNumLed(letterDash, "dig1", 100); 
+  delay(3000); 
+  FastLED.show(); 
+  delay(1); 
+}
+
 // Define the array of leds
 CRGB leds[NUM_LEDS];
 
@@ -247,13 +247,7 @@ void setup() {
   FastLED.clear();
   FastLED.show();
 
-  delay(3000);
 
-  if(!jason){
-    printHi(); 
-    printJSON();
-    jason = 1;
-  }
 }
 //#REGION clockstuf
 
@@ -325,6 +319,24 @@ void test_3() {
   }
 }
 
+void lightZeroWinnerColor(std::string winner) {
+  changeNumLedWC(getSevenSegmentDisplay(0), "dig1", winner); 
+  changeNumLedWC(getSevenSegmentDisplay(0), "dig2", winner); 
+  changeNumLedWC(getSevenSegmentDisplay(0), "dig3", winner); 
+  changeNumLedWC(getSevenSegmentDisplay(0), "dig4", winner); 
+  FastLED.show(); 
+  delay(1); 
+}
+
+struct CRGB getWinnerColor(std::string winner) {
+  if (winner == "blue") {
+    return CRGB::Blue; 
+  }
+  if (winner == "orange") {
+    return CRGB::Orange; 
+  }
+}
+
 std::vector<int> secondsToMinuteDigits(int seconds) {
     int minutes = seconds / 60;
     int remainingSeconds = (seconds % 60);
@@ -335,6 +347,44 @@ std::vector<int> secondsToMinuteDigits(int seconds) {
         remainingSeconds / 10,  // Tens place of seconds
         remainingSeconds % 10   // Ones place of seconds
     };
+}
+// changes color of board
+struct CRGB getColor(float seconds) {
+  if (seconds >= 30) {
+    return CRGB::Green; 
+  }
+  else if (seconds >= 10) {
+    return CRGB::Yellow; 
+  }
+  else {
+    return CRGB::Red; 
+  }
+} 
+
+void goToBlack() {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CRGB::Black; 
+  }
+  FastLED.show(); 
+  delay(1); 
+}
+
+void setToColor(struct CRGB color) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    if (leds[i] != CRGB::Black) {
+      leds[i] = color; 
+    }
+  }
+  FastLED.show(); 
+  delay(1); 
+}
+
+void setAlltoColor(struct CRGB color) {
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = color; 
+  }
+  FastLED.show(); 
+  delay(1); 
 }
 
 struct CRGB getColor(float seconds) {
@@ -429,6 +479,24 @@ void changeNumLed(std::vector<bool> ledVec, std::string name, float seconds) {
       leds[TEST_MAP[name][i]-1] = getColor(seconds);
       leds[TEST_MAP[name][i]] = getColor(seconds);
       leds[TEST_MAP[name][i]+1] = getColor(seconds); 
+    }
+    else {
+      leds[TEST_MAP[name][i]-1] = CRGB::Black;
+      leds[TEST_MAP[name][i]] = CRGB::Black;
+      leds[TEST_MAP[name][i]+1] = CRGB::Black; 
+    }
+
+    FastLED.show(); 
+    delay(1); 
+  }
+}
+
+void changeNumLedWC(std::vector<bool> ledVec, std::string name, std::string winner) {
+  for (int i = 0; i < 7; i++) {
+    if (ledVec[i]) {
+      leds[TEST_MAP[name][i]-1] = getWinnerColor(winner); 
+      leds[TEST_MAP[name][i]] = getWinnerColor(winner); 
+      leds[TEST_MAP[name][i]+1] = getWinnerColor(winner); 
     }
     else {
       leds[TEST_MAP[name][i]-1] = CRGB::Black;
@@ -552,6 +620,22 @@ int testIntegration(float seconds, bool pause) {
   //}
 }
 
+void lightBlueGear() {
+  for (int i = 0; i < 4; i++) {
+      leds[TEST_MAP["gear1"][i]] = CRGB::Blue; 
+  }
+  FastLED.show(); 
+  delay(1);
+}
+
+void lightOrangeGear() {
+  for (int i = 0; i < 4; i++) {
+      leds[TEST_MAP["gear2"][i]] = CRGB::Orange; 
+  }
+  FastLED.show(); 
+  delay(1);
+}
+
 unsigned char data[7];
 
 void send(){
@@ -589,7 +673,7 @@ void loop() {
   if (connected) {
     int len = udp.parsePacket();
     if (len > 0) {
-      Serial.print("src IP: "); // use this for where it is from - I think ill tdo the << for if I should read this or not.. 
+      Serial.print("src IP: ");
       Serial.print(udp.remoteIP());
       Serial.print(";    packet: [");
       char buf[len];
@@ -612,13 +696,18 @@ void loop() {
       recData.readyOrange = buf[8]?1:0;
       recData.orangeTapin = buf[9]?1:0;
       recData.blueTapin   = buf[10]?1:0;
-    
+      if(sendData.done && recData.startClock){
+        recData.startClock = 0;
+      }
+      else if(sendData.done){
+        sendData.done = 0; // should prevent an immediate restart. also means you cant just lean on the start button to get it to restart imediatly. I think thatts good 
+      }
       if(recData.startClock && runclock == 0){
         runclock = 1;
         sendData.run = runclock;
 
 
-        sendData.done = 0;
+        //sendData.done = 0; I dont think this is useful to me anymore.... 
       }
       
 
@@ -633,17 +722,12 @@ void loop() {
 
   
     if( recData.readyBlue ){
-      for (int i = 0; i < 4; i++) {
-        leds[TEST_MAP["gear1"][i-1]] = CRGB::Blue; 
-        
-      }
+      lightBlueGear();
       FastLED.show(); 
       
     }
     if( recData.readyOrange ){
-      for (int i = 0; i < 4; i++) {
-        leds[TEST_MAP["gear2"][i-1]] = CRGB::Orange; 
-      }
+      lightOrangeGear();
       FastLED.show(); 
   
     }
@@ -652,6 +736,7 @@ void loop() {
     if(reset){
       runclock = 0;
       recData.reset = 0;
+      setStartClock = 1;
   
       // whatever other resting the clock stuffff.. (set black ? or ) 
       //send acknak 
@@ -664,16 +749,20 @@ void loop() {
       if(recData.win == 1){
         runclock = 0;
         sendData.run = runclock;
+        setStartClock = 1;
         send();
         // orange win
         //whole clock winnigng color. 
+        lightZeroWinnerColor("orange");
       }
       else if (recData.win == 2) {
         runclock = 0;
         sendData.run = runclock;
+        setStartClock = 1;
         send();  
   
         //blue win
+        lightZeroWinnerColor("blue");
       }
       else{
         //wth
@@ -682,15 +771,16 @@ void loop() {
     else if (runclock) {
       //Serial.println("AHHHHHHHH RUNNNN");
       
-      state = testIntegration(120.00, recData.pause); 
+      state = testIntegration(120.00, recData.pause); x
       if ( state == 0 ){
         // yellow, 
         // send done,
         sendData.done = 1;
         runclock = 0;
-        sendData.run = runclock;
+        sendData.run = runclock;,
   
         send();
+        delay(500);// just to make sure that the l;aptop gets the jist and I dont just start the clock agian immediatly. ill do somemore logic for this too
       } 
   
     }
