@@ -7,6 +7,7 @@ import messages
 import gui
 import time
 import sys
+import errno
 
 Gui = gui.GUI()
 
@@ -38,7 +39,7 @@ Gui = gui.GUI()
 ###################################################
 # Common configuration items, used by both send 
 # and receive:
-MCAST_GRP   = '224.1.1.1' # in range ()
+MCAST_GRP   = "224.1.1.1" # in range ()
 
 
 
@@ -66,7 +67,7 @@ tx_sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, MULTICAST_TTL)
 rx_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 rx_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # on this port, listen ONLY to MCAST_GRP
-rx_sock.bind(("0.0.0.0", MCAST_PORT))
+rx_sock.bind(("0.0.0.0", 5006))
 rx_sock.setblocking(False)
 
 # join the multicast group, to receive packets addressed to it
@@ -81,21 +82,27 @@ rx_sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
 
 def parseData( data ): # im just gonna add an int to all of these
-    if(data[0:3] == 0x1):
-        fromClock.fromBytes(data[4:])
-        return 1
-    elif(data[0:3] == 0x2):
-        fromOrange.fromBytes(data[4:])
-        return 1
-    elif(data[0:3] == 0x3):
-        fromBlue.fromBytes(data[4:])
-        return 1
-    else:
-        return 0
+    print(data)
+    #if(data[0] == 0x1):
+    #    print("fromClock")
+    #    fromClock.fromBytes(data[4:])
+    #    return 1
+    #elif(data[0] == 0x2):
+    #    print("fromOrange")
+    #    fromOrange.fromBytes(data[4:])
+    #    return 1
+    #elif(data[0] == 0x3):
+    #    print("FromBlue")
+    #    fromBlue.fromBytes(data[4:])
+    #    return 1
+    #else:
+    #    return 0
     
 toClock    = messages.to_clock_data(tx_sock)
 toOrange   = messages.to_button_data(tx_sock)
+toOrange.assignCol(1)
 toBlue     = messages.to_button_data(tx_sock)
+toBlue.assignCol(0)
 fromOrange = messages.from_button_data()
 fromBlue   = messages.from_button_data()
 fromClock  = messages.from_clock_data()
@@ -110,15 +117,15 @@ clcokDone = False
 while not gui.glfw.window_should_close(Gui.window):
     
     Gui.loop(toBlue, fromBlue, toOrange, fromOrange, toClock, fromClock)
-    
+    orangeTapin = toClock.orangeTapin
+    blueTapin = toClock.blueTapin
 
     
     if (time.time() - fastTimer) > 0.1: # in sec
         # WRITE:
         fastTimer = time.time()
-
+        #print("sending things")
         toBlue.send()
-        toOrange.send()
         toClock.send()
 
         # For Python 3, change next line to 'sock.sendto(b"robot", ...' to avoid the
@@ -128,20 +135,24 @@ while not gui.glfw.window_should_close(Gui.window):
         # For Python 3, change next line to "print(sock.recv(10240))"
         try:
             indata = rx_sock.recv(1024)
+            #print("after")
             
-        except BlockingIOError: # I ma  y have larger issues....
-            print("e")
+        except socket.error as e:
+            err = e.args[0]
+            e.args[0]
+            if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                #print ('No data available') 
+                continue 
+            else: # a "real" error occurred print
+                sys.exit(1) 
+        else: # got a message
+            print("DATATATAT")    
+            pass   
 
-        finally:
-            print("a")
-            indata = [0]
-            
-                
-
-
-        if((indata[0]) != 0):
+        #print(len(indata))
+        if(len(indata) > 1):
             parseData( indata )
-            print("parsisisnd")
+            #print("parsisisnd")
 
         # Check changes and set acks?
         
@@ -175,26 +186,29 @@ while not gui.glfw.window_should_close(Gui.window):
         
         #TO button stuff? 
         #
-        toBlue.col = 0
-        toOrange.col = 0
+        toBlue.color = 0
+        toOrange.color = 0
         if(blueTapin == 1):
             if(toClock.readyBlue == 1):
-                toBlue.col = 1
+                toBlue.color = 1
             else:
-                toBlue.col = 0
+                toBlue.color = 2
         if(orangeTapin == 1 ):
             if(toClock.readyOrange ==1 ):
-                toOrange.col = 1
+                toOrange.color = 1
             else:
-                toOrange.col = 0 
+                toOrange.color = 2
         
         
         if(toClock.win == 1 ):
-            toOrange.col = 2
-            toBlue.col = 3
+            toOrange.color = 2
+            toBlue.color = 3
         elif(toClock.win == 2 ):
-            toOrange.col = 3
-            toBlue.col = 2
+            toOrange.color = 3
+            toBlue.color = 2
+        print(toOrange.color)
+        toOrange.send()
+
         # should I put them to somehting other than the ready color when the match starts?
 
         #okay I think thats it... 

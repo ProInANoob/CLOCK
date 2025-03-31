@@ -64,8 +64,9 @@ class to_button_data():
     def send( self ):
         raw = self.toBytes()
         #raw = (raw << 2) + 0x3
-        print("send to button")
-        if self.color == 1:
+        #print("send to button")
+        print(self.color)
+        if self.col == 1:
            self.tx_sock.sendto( raw, (MCAST_GRP, MCAST_PORT_ORANGE))
         else:
             self.tx_sock.sendto( raw, (MCAST_GRP, MCAST_PORT_BLUE))
