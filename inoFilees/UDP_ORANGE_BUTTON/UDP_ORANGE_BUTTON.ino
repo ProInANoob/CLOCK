@@ -10,8 +10,8 @@
 const int udpSend = 5006;
 const int udpRecieve = 5009; //?
 
-#define TAPOUT_PIN 14 // go oback to 10
-#define READY_PIN 15 // abck to 11
+#define TAPOUT_PIN 10 // go oback to 10
+#define READY_PIN 11 // abck to 11
 #define NUMPIXELS 30  // Number of LEDs in strip
 #define DATA_PIN 12
 #define CLOCK_PIN 13
@@ -201,43 +201,46 @@ long timerVal = millis();
 void loop() {
 
   int readyReading = digitalRead(READY_PIN);
-  if (readyReading != lastReadyState) {
-    // reset the debouncing timer
-    lastReadyDebounceTime = millis();
-  }
-  if ((millis() - lastReadyDebounceTime) > debounceDelay) {
+  //if (readyReading != lastReadyState) {
+  //  // reset the debouncing timer
+  //  lastReadyDebounceTime = millis();
+  //}
+  //if ((millis() - lastReadyDebounceTime) > debounceDelay) {
     // whatever the reading is at, it's been there for longer than the debounce
     // delay, so take it as the actual current state:
 
     // if the button state has changed:
-    if (readyReading != readyState) {
-      readyState = readyReading;
+    //if (readyReading != readyState) {
+    //  readyState = readyReading;
 
       // only toggle the LED if the new button state is HIGH
-      if ((readyState == HIGH) ) {
+      if ((readyReading == HIGH) ) {
         send_data.main_press = 1;
+        
       }
-    }
+    //}
+  //}
+  if(rec_data.main_ack){
+    send_data.main_press = 0;
   }
-
   int tapoutReading = digitalRead(TAPOUT_PIN);
-  if (tapoutReading != lastTapoutState) {
-    // reset the debouncing timer
-    lastTapoutDebounceTime = millis();
-  }
-  if ((millis() - lastTapoutDebounceTime) > debounceDelay) {
+  //if (tapoutReading != lastTapoutState) {
+  //  // reset the debouncing timer
+  //  lastTapoutDebounceTime = millis();
+  //}
+  //if ((millis() - lastTapoutDebounceTime) > debounceDelay) {
     // whatever the reading is at, it's been there for longer than the debounce
     // delay, so take it as the actual current state:
 
     // if the button state has changed:
-    if (tapoutReading != tapoutState) {
-      tapoutState = tapoutReading;
-        if(tapoutState == 1){
+    //if (tapoutReading != tapoutState) {
+    //  tapoutState = tapoutReading;
+        if(tapoutReading == 1){
           send_data.tap_press = 1;
         }
 
-      }
-  }
+      //}
+  //}
 
 
   
@@ -245,18 +248,18 @@ void loop() {
   
   int len = udp.parsePacket();
   if (len > 0) {
-    Serial.print("src IP: ");
-    Serial.print(udp.remoteIP());
-    Serial.print(";    packet: [");
+    //Serial.print("src IP: ");
+    //Serial.print(udp.remoteIP());
+    //Serial.print(";    packet: [");
     char buf[len];
     udp.read(buf, len);
-    for(int i = 0; i < len; i++){
-      Serial.print(buf[i], HEX);
-      Serial.print(", ");
-    }
-    Serial.println(" ");
-    rec_data.tap_ack  = buf[4]?1:0;
-    rec_data.main_ack = buf[5]?1:0;
+    //for(int i = 0; i < len; i++){
+    //  Serial.print(buf[i], HEX);
+    //  Serial.print(", ");
+    //}
+    ////Serial.println(" ");
+    rec_data.tap_ack  = buf[5]?1:0;
+    rec_data.main_ack = buf[4]?1:0;
     rec_data.color  = buf[0];
     //rec_data.color += buf[1] << 8;
     //rec_data.color += buf[2] << 16;
@@ -269,6 +272,7 @@ void loop() {
       send_data.tap_press = 0;
     }
 
+    //Serial.println(rec_data.color);
 
       // NOTE::: 0-4 will be the from ID when I send thesesese. 
     }
@@ -276,7 +280,6 @@ void loop() {
 
   
 
-  Serial.println(rec_data.color);
   switch (rec_data.color)
   {
   case 0:
@@ -307,8 +310,9 @@ void loop() {
   // Serial.println();
   lastReadyState = readyReading;
   lastTapoutState = tapoutReading;
-  if(millis() - timerVal > 500 && deviceCount > 2){
-    //Serial.println("KJASNFHKJSDHBGJHSDGKJHSDGFHJL");
+  if(millis() - timerVal > 500 && deviceCount > 2){ /// NOTTE I just changed this back from 500 -> 100 so if it dosent get/send data that might be whyyyyyy okay>>>
+    Serial.println(send_data.main_press);
+    timerVal = millis();
     send();
   }
 

@@ -34,6 +34,7 @@ class GUI(object):
     keys = None
     framecount = 0
     newframecount = 0
+    nonReadyStart =0
 
     def __init__(self):
         print("Run innit")
@@ -104,7 +105,7 @@ class GUI(object):
         self.impl.process_inputs()
         keys = self.getKeys()
         if keys[0]:
-            print("O tapin")
+            print("O tapina")
             to_clock.orangeTapin = 1
         if keys[1]:
             to_clock.blueTapin = 1
@@ -114,13 +115,13 @@ class GUI(object):
             #KO. witch one JASONNNNNNNNN
             pass
         if keys[4]:
-            to_clock.pause = 1
+            to_clock.pause = 1 # I hsould add a deboutnce timer to the paus ething and then make it toggle. also start should set it to 0. or mabey I do a new w ndow tat say sits paused. whatever idk. 
 
 
         imgui.new_frame()
         imgui.begin("Custom window", True)
         imgui.core.push_font(self.new_font)
-        ##Okay so... 
+        ##Okay So... 
         # start button
         # reset button
         # pause button remove when not running?
@@ -131,21 +132,54 @@ class GUI(object):
         #
  
 
-        imgui.text("Hello, world!")
+        #imgui.text("Hello, world!")
 
-        if imgui.button("START"):
-                print("STAERT")
+        if imgui.button("Orange Tapin"):
+             to_clock.orangeTapin = 1
+
+        if imgui.button("Blue Tapin"):
+            to_clock.blueTapin = 1
+
+
+        if imgui.button("START", 200, 100) or self.nonReadyStart == 1:
+            if to_clock.readyBlue + to_clock.readyOrange != 2:
+                self.nonReadyStart = 1
+                with imgui.begin("Non ready start"):
+                    imgui.text("Both Sides did not ready, do you still wish to Start?")
+                    if imgui.button("START", 200, 100):
+                        self.nonReadyStart = 0
+                        to_clock.startClock = 1
+                        to_orange.color = 1
+                        to_blue.color = 1
+                    if imgui.button("Abort"):
+                        self.nonReadyStart = 0
+            else:
                 to_clock.startClock = 1
         
         if imgui.button("RESET"):
                 print("RESERT")
                 to_clock.reset = 1
+                to_clock.startClock = 0
+                to_clock.blueTapin = 0
+                to_clock.orangeTapin = 0
+                to_clock.readyBlue = 0
+                to_clock.readyOrange = 0
+                to_clock.win = 0
                 # also buttons shoud go to idle probably. 
         if to_clock.startClock or from_clock.running:
 
             if imgui.button("PAUSE"):
                     print("PAUSES")
                     to_clock.pause = 1
+
+        
+
+        if to_clock.pause == 1:
+            with imgui.begin("Pasued Menu", True):
+                if imgui.button("Resume", 200, 200):
+                    to_clock.pause = 0
+                
+                    
         
         #as ref.         
         #_, self.string = imgui.input_text("A String", self.string, 256)

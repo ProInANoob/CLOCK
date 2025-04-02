@@ -110,7 +110,7 @@ void WiFiEvent(WiFiEvent_t event) {
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
       Serial.print("Obtained IP address: ");
       Serial.println(WiFi.localIP());
-      udp.beginMulticast(IPAddress(244, 1, 1, 1), 5008);
+      //udp.beginMulticast(IPAddress(244, 1, 1, 1), 5008);
       break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:        Serial.println("Lost IP address and IP address is reset to 0"); break;
     case ARDUINO_EVENT_WPS_ER_SUCCESS:          Serial.println("WiFi Protected Setup (WPS): succeeded in enrollee mode"); break;
@@ -165,11 +165,17 @@ unsigned char data[3];
 
 void send(){
   data[0] = 0x3; // spec ID for pyth to know where it came from. 
-  data[1] = send_data.main_press;
+  if(send_data.main_press){
+    data[1] = 0x1;
+  } else {
+    data[1] = 0x0;
+  }
   data[2] = send_data.tap_press;
+  Serial.print( data[1]);
+  //Serial.println("   SNEDDING " );
   
   udp.beginPacket(IPAddress(224,1,1,1), 5006);
-  udp.write(data, sizeof(data));
+  udp.write(data, sizeof(char)*3);
   udp.endPacket();
 }
 
@@ -220,39 +226,43 @@ void loop() {
     // reset the debouncing timer
     lastReadyDebounceTime = millis();
   }
-  if ((millis() - lastReadyDebounceTime) > debounceDelay) {
+  if(rec_data.main_ack){
+    send_data.main_press = 0;
+  }
+  //if ((millis() - lastReadyDebounceTime) > debounceDelay) {
     // whatever the reading is at, it's been there for longer than the debounce
     // delay, so take it as the actual current state:
 
     // if the button state has changed:
-    if (readyReading != readyState) {
-      readyState = readyReading;
+    //if (readyReading != readyState) {
+    //  readyState = readyReading;
 
       // only toggle the LED if the new button state is HIGH
-      if ((readyState == HIGH) ) {
+      if ((readyReading == HIGH) ) {
         send_data.main_press = 1;
+        Serial.println("FOUND A BUTTON PRESSSS");
       }
-    }
-  }
+    //}
+  //}
 
   int tapoutReading = digitalRead(TAPOUT_PIN);
   if (tapoutReading != lastTapoutState) {
     // reset the debouncing timer
     lastTapoutDebounceTime = millis();
   }
-  if ((millis() - lastTapoutDebounceTime) > debounceDelay) {
+  //if ((millis() - lastTapoutDebounceTime) > debounceDelay) {
     // whatever the reading is at, it's been there for longer than the debounce
     // delay, so take it as the actual current state:
 
     // if the button state has changed:
-    if (tapoutReading != tapoutState) {
-      tapoutState = tapoutReading;
-        if(tapoutState == 1){
+    //if (tapoutReading != tapoutState) {
+      //tapoutState = tapoutReading;
+        if(tapoutReading == 1){
           send_data.tap_press = 1;
         }
 
-      }
-  }
+      //}
+  //}
 
 
   
@@ -270,14 +280,11 @@ void loop() {
         Serial.print(buf[i], HEX);
        Serial.print(", ");
       }
-      Serial.println(" ");
-      rec_data.tap_ack  = buf[4]?1:0;
-      rec_data.main_ack = buf[5]?1:0;
-      rec_data.color  = buf[0]; // its are gonna be wierrrd cauyse singhs that dont realy transfer welllll...
-      rec_data.color += buf[1] << 8;
-      rec_data.color += buf[2] << 16;
-      rec_data.color += buf[3] << 24;
 
+      rec_data.tap_ack  = buf[5]?1:0;
+      rec_data.main_ack = buf[4]?1:0;
+      rec_data.color  = buf[0];
+      Serial.println("");
       if( rec_data.main_ack && send_data.main_press){
         send_data.main_press = 0;
       }
@@ -292,7 +299,7 @@ void loop() {
 
   }
 
-  Serial.println(rec_data.color);
+  //Serial.println(rec_data.color);
 
   switch (rec_data.color)
   {
@@ -300,6 +307,7 @@ void loop() {
     setStrip(yellow);
     break;
   case 1:
+    //Serial.println("GREEENNN");
     setStrip(green);
     break;
   case 2:
@@ -324,7 +332,8 @@ void loop() {
   // Serial.println();
   lastReadyState = readyReading;
   lastTapoutState = tapoutReading;
-  if(millis() - timerVal > 100){
+  if((millis() - timerVal) > 500){
+    timerVal = millis();
     send();
   }
 

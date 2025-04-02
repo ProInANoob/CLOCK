@@ -120,7 +120,7 @@ void WiFiEvent(WiFiEvent_t event) {
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
       Serial.print("Obtained IP address: ");
       Serial.println(WiFi.localIP());
-      udp.beginMulticast(IPAddress(244, 1, 1, 1), udpRecieve);
+      //udp.beginMulticast(IPAddress(244, 1, 1, 1), udpRecieve);
       break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:        Serial.println("Lost IP address and IP address is reset to 0"); break;
     case ARDUINO_EVENT_WPS_ER_SUCCESS:          Serial.println("WiFi Protected Setup (WPS): succeeded in enrollee mode"); break;
@@ -151,6 +151,7 @@ void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info) {
   Serial.println("IP address: ");
   Serial.println(IPAddress(info.got_ip.ip_info.ip.addr));
 }
+
 
 void printHi() {
   std::vector<bool> letterH = {false, true, false, true, true, true, true}; 
@@ -250,7 +251,7 @@ void setup() {
 
 
 }
-//#REGION clockstuf
+#pragma region clock_test
 
 void test_1() {
   Serial.println("Blink"); 
@@ -542,7 +543,7 @@ void testNumber() {
   FastLED.show(); 
   delay(1); 
 }
-//#ENDREGION
+#pragma endregion clock_stuff
 
 
 // just making there here so I dont have to scroll
@@ -641,15 +642,12 @@ unsigned char data[7];
 
 void send(){
   data[0] = 0x1;
-  data[1] = 0x0;
-  data[2] = 0x0;
-  data[3] = 0x0;
   data[4] = sendData.run;
   data[5] = sendData.done;
   data[6] = sendData.reset_ack;
   
   udp.beginPacket(IPAddress(224, 1, 1, 1), udpSend);
-  udp.write(data, sizeof(int)*6);
+  udp.write(data, sizeof(data));
   udp.endPacket();
 }
 
@@ -685,7 +683,7 @@ void loop() {
       //}
       //Serial.println(" ");
 
-      //unpack vals.
+      //unpack vals. thses might be backward.... 
       recData.startClock  = buf[0]?1:0;
       recData.reset       = buf[1]?1:0;
       recData.pause       = buf[2]?1:0;

@@ -63,9 +63,11 @@ class to_button_data():
 
     def send( self ):
         raw = self.toBytes()
+        if(raw[5] == 1):
+            print("ACKKK")
         #raw = (raw << 2) + 0x3
         #print("send to button")
-        print(self.color)
+        #print(self.color)
         if self.col == 1:
            self.tx_sock.sendto( raw, (MCAST_GRP, MCAST_PORT_ORANGE))
         else:
@@ -77,6 +79,8 @@ class from_button_data():
         self.tapoutPress = 0
 
     def fromBytes(self, raw):
-        vals = struct.unpack("<??", raw)
-        self.mainPress   = vals[0]
-        self.tapoutPress = vals[1]
+        vals = struct.unpack("<???", raw)
+        self.mainPress   = vals[1]
+        print(self.mainPress, "  < ---------")
+
+        self.tapoutPress = vals[2]

@@ -8,8 +8,14 @@ import gui
 import time
 import sys
 import errno
+import os
 
 Gui = gui.GUI()
+
+printOrange = 1
+printBlue = 1
+printClock = 1
+
 
 
 # I 'can' only send on one port, so i need to differectiate between goes to clock and  goes to button.   I thing data << 1 + 1 or +0, then check %2, on the arduino end to see.
@@ -82,21 +88,22 @@ rx_sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
 
 def parseData( data ): # im just gonna add an int to all of these
-    print(data)
-    #if(data[0] == 0x1):
-    #    print("fromClock")
-    #    fromClock.fromBytes(data[4:])
-    #    return 1
-    #elif(data[0] == 0x2):
-    #    print("fromOrange")
-    #    fromOrange.fromBytes(data[4:])
-    #    return 1
-    #elif(data[0] == 0x3):
-    #    print("FromBlue")
-    #    fromBlue.fromBytes(data[4:])
-    #    return 1
-    #else:
-    #    return 0
+    if(data[0] == 0x1):
+        #print("fromClock")
+        fromClock.fromBytes(data[1:])
+        return 1
+    elif(data[0] == 0x2):
+        #print("fromOrange")
+        fromOrange.fromBytes(data)
+        return 1
+    elif(data[0] == 0x3):
+        #print(data[1])
+
+        #print("FromBlue")
+        fromBlue.fromBytes(data)
+        return 1
+    else:
+        return 0
     
 toClock    = messages.to_clock_data(tx_sock)
 toOrange   = messages.to_button_data(tx_sock)
@@ -125,93 +132,121 @@ while not gui.glfw.window_should_close(Gui.window):
         # WRITE:
         fastTimer = time.time()
         #print("sending things")
+        toOrange.send()
         toBlue.send()
         toClock.send()
 
         # For Python 3, change next line to 'sock.sendto(b"robot", ...' to avoid the
         # "bytes-like object is required" msg (https://stackoverflow.com/a/42612820)
         
-        # READ:
-        # For Python 3, change next line to "print(sock.recv(10240))"
-        try:
-            indata = rx_sock.recv(1024)
-            #print("after")
-            
-        except socket.error as e:
-            err = e.args[0]
-            e.args[0]
-            if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                #print ('No data available') 
-                continue 
-            else: # a "real" error occurred print
-                sys.exit(1) 
-        else: # got a message
-            print("DATATATAT")    
-            pass   
-
-        #print(len(indata))
+    # READ:
+    # For Python 3, change next line to "print(sock.recv(10240))"
+    try:
+        indata = rx_sock.recv(1024)
+        #print("after")
+        
+    except socket.error as e:
+        err = e.args[0]
+        e.args[0]
+        if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+            #print ('No data available') 
+            pass 
+        else: # a "real" error occurred print
+            sys.exit(1) 
+    else: # got a message
+        print("DATATATAT")   
         if(len(indata) > 1):
-            parseData( indata )
-            #print("parsisisnd")
+            parseData( indata ) 
+    #print("hi?")
 
-        # Check changes and set acks?
-        
+    #print(len(indata))
+    
+        #print("parsisisnd")
 
-        # TOCLCOK
-        #3start int gui
-        #3reset in gui
-        #3pause in gui
-        #win can be tapout ( 1= orange win)
-        if(fromBlue.tapoutPress ==1 or fromOrange.tapoutPress == 1):
-            toClock.win = 1 if fromBlue.tapoutPress == 1 else 2
-            if toClock.win == 1:
-                toBlue.tap_ack = True
-            else:
-                toOrange.tap_ack = True
-        #READYbLUE 
-        if (fromBlue.mainPress and blueTapin): 
-            toClock.readyBlue = 1 
-            toBlue.main_ack = True
-        #ReadyOrange
-        if (fromOrange.mainPress and orangeTapin):
-            toClock.readyOrange = 1  
-            toOrange.main_ack = True
+    # Check changes and set acks?
+    
+    # TOCLCOK
+    #3start int gui
+    #3reset in gui
+    #3pause in gui
+    #win can be tapout ( 1= orange win)
+    if(fromBlue.tapoutPress == 1 or fromOrange.tapoutPress == 1):
+        toClock.win = 1 if fromBlue.tapoutPress == 1 else 2
+        if toClock.win == 1:
+            toBlue.tap_ack = True
+        else:
+            toOrange.tap_ack = True
+    #READYbLUE 
+    if (fromBlue.mainPress == 1 and toClock.blueTapin == 1): 
+        toClock.readyBlue = 1 
+        toBlue.main_ack = True
+    elif (fromBlue.mainPress == 1):
+        toBlue.main_ack = True
+    else:
+        toBlue.main_ack = False
 
-        #tapins are gui setup.
+    #ReadyOrange
+    if (fromOrange.mainPress == 1 and toClock.orangeTapin == 1):
+        toClock.readyOrange = 1  
+        toOrange.main_ack = True
+    elif ( fromOrange.mainPress == 1):
+        toOrange.main_ack = True
+    else:
+        toOrange.main_ack = False
 
-        # from fromclock.
-        # done handleing. uh idk what that would entail but uh. 
-        if fromClock.done:
-            toClock.startClock = 0
-        
-        #TO button stuff? 
-        #
-        toBlue.color = 0
-        toOrange.color = 0
-        if(blueTapin == 1):
-            if(toClock.readyBlue == 1):
-                toBlue.color = 1
-            else:
-                toBlue.color = 2
-        if(orangeTapin == 1 ):
-            if(toClock.readyOrange ==1 ):
-                toOrange.color = 1
-            else:
-                toOrange.color = 2
-        
-        
-        if(toClock.win == 1 ):
-            toOrange.color = 2
-            toBlue.color = 3
-        elif(toClock.win == 2 ):
-            toOrange.color = 3
+
+    #tapins are gui setup.
+
+    # from fromclock.
+    # done handleing. uh idk what that would entail but uh. 
+    if fromClock.done == 1:
+        toClock.startClock = 0
+    
+    #TO button stuff? 
+    #
+    toBlue.color = 0
+    toOrange.color = 0
+    
+    if(toClock.startClock == 1):
+        toBlue.color = 1
+    if(blueTapin == 1):
+        if(toClock.readyBlue == 1):
+            toBlue.color = 1
+        else:
             toBlue.color = 2
-        print(toOrange.color)
-        toOrange.send()
 
-        # should I put them to somehting other than the ready color when the match starts?
+    if(toClock.startClock == 1):
+        toOrange.color = 1
+    elif(orangeTapin == 1 ):
+        if(toClock.readyOrange ==1 ):
+            toOrange.color = 1
+        else:
+            toOrange.color = 2
+    
+    
+    if(toClock.win == 1 ):
+        toOrange.color = 2
+        toBlue.color = 3
+    elif(toClock.win == 2 ):
+        toOrange.color = 3
+        toBlue.color = 2
 
-        #okay I think thats it... 
 
+    # should I put them to somehting other than the ready color when the match starts?
+
+    #okay I think thats it... 
+    #print("SJDJSJJ")
+    s = ""
+    if printOrange == 1:
+        s  += "(Orange) Color: " + str(toOrange.color) + " | TAP_ACK: " + str(toOrange.tap_ack) + " | main: " + str(toOrange.main_ack) + "\n"
+    if printBlue == 1:
+        s += "(Blue) Color: " + str(toBlue.color) + " | TAP_ACK: " + str(toBlue.tap_ack) + " | main: " + str(toBlue.main_ack) + "\n"
+    if printClock == 1:
+        s += "(Clock) Start: " + str(toClock.startClock) + " | rBlue: " + str(toClock.readyBlue) + " | rOrange: " + str(toClock.readyOrange) + " | pause: " + str(toClock.pause) # theres more but il add tase if nessisary
+    if len(s) > 1:
+        os.system('cls')
+        print(s)
+        #print(fromBlue.mainPress)
 gui.self.impl.shutdown()
+
 gui.glfw.terminate()
