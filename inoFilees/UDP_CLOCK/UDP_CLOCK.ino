@@ -47,7 +47,7 @@ WiFiUDP udp;
 // need to define DATA_PIN.  For led chipsets that are SPI based (four wires - data, clock,
 // ground, and power), like the LPD8806 define both DATA_PIN and CLOCK_PIN
 // Clock pin only needed for SPI based chipsets when not using hardware SPI
-#define DATA_PIN D10 //D1 //13 on ESP
+#define DATA_PIN 13 //D1 //13 on ESP
 #define CLOCK_PIN 22 // D5 //22 on ESP
 
 std::map<std::string, std::vector<int>> TEST_MAP; 
@@ -87,7 +87,7 @@ void initMap() {
   TEST_MAP["dot1"] = {48}; //upper colon
   TEST_MAP["dot2"] = {47}; //lower colon
   TEST_MAP["dot3"] = {46}; //period 
-  TEST_MAP["gear1"] = {1, 2, 3, 4};
+  TEST_MAP["gear1"] = {0, 1, 2, 3};
   TEST_MAP["gear2"] = {92, 93, 94, 95};
 }
 
@@ -241,7 +241,7 @@ void setup() {
   Serial.println();
   Serial.println("Wait for WiFi... ");
 
-
+  udp.beginMulticast(IPAddress(224, 1, 1, 1), 5007);
 
   initMap(); 
   Serial.println("Init"); 
@@ -321,6 +321,27 @@ void test_3() {
   }
 }
 
+
+std::unordered_map<int, std::vector<bool>> sevenSegmentMap = {
+
+    {0, {true, true, true, false, true, true, true}},
+    {1, {false, true, false, false, true, false, false}},
+    {2, {true, false, true, true, true, false, true}},
+    {3, {true, true, true, true, true, false, false}},
+    {4, {false, true, false, true, true, true, false}},
+    {5, {true, true, true, true, false, true, false}},
+    {6, {true, true, true, true, false, true, true}},
+    {7, {true, true, false, false, true, false, false}},
+    {8, {true, true, true, true, true, true, true}},
+    {9, {true, true, true, true, true, true, false}}
+};
+
+
+
+std::vector<bool> getSevenSegmentDisplay(int digit) {
+    return sevenSegmentMap[digit];
+}
+
 void lightZeroWinnerColor(std::string winner) {
   changeNumLedWC(getSevenSegmentDisplay(0), "dig1", winner); 
   changeNumLedWC(getSevenSegmentDisplay(0), "dig2", winner); 
@@ -389,20 +410,11 @@ void setAlltoColor(struct CRGB color) {
   delay(1); 
 }
 
-struct CRGB getColor(float seconds) {
-  if (seconds >= 60) {
-    return CRGB::Green; 
-  }
-  else if (seconds >= 30) {
-    return CRGB::Yellow; 
-  }
-  else {
-    return CRGB::Red; 
-  }
-} 
+
 
 std::vector<int> formatTime(double inputTime) {
     std::vector<int> result(5, 0);  // Initialize vector with five zeros
+    Serial.println("I THINK ITS AROUND HEREEEEEEEEEEEEEEEEEEEEEEEEEEE");
     // Extract minutes and seconds
     int totalSeconds = static_cast<int>(inputTime);
     int minutes = totalSeconds / 60;
@@ -428,23 +440,6 @@ std::vector<int> formatTime(double inputTime) {
     return result;
 }
 
-std::unordered_map<int, std::vector<bool>> sevenSegmentMap = {
-
-    {0, {true, true, true, false, true, true, true}},
-    {1, {false, true, false, false, true, false, false}},
-    {2, {true, false, true, true, true, false, true}},
-    {3, {true, true, true, true, true, false, false}},
-    {4, {false, true, false, true, true, true, false}},
-    {5, {true, true, true, true, false, true, false}},
-    {6, {true, true, true, true, false, true, true}},
-    {7, {true, true, false, false, true, false, false}},
-    {8, {true, true, true, true, true, true, true}},
-    {9, {true, true, true, true, true, true, false}}
-};
-
-std::vector<bool> getSevenSegmentDisplay(int digit) {
-    return sevenSegmentMap[digit];
-}
 
 std::string formatBoolVector(const std::vector<bool>& vec) {
     std::string result = "{";
@@ -558,7 +553,8 @@ int testIntegration(float seconds, bool pause) {
   }
 
   if( pause ) {
-    clockStartTime = millis() - (sec * 1000);
+    Serial.println((sec * 1000));
+    clockStartTime = millis() + ((sec - seconds) * 1000);
     return 1; 
   }
 
@@ -638,13 +634,13 @@ void lightOrangeGear() {
   delay(1);
 }
 
-unsigned char data[7];
+unsigned char data[4];
 
 void send(){
   data[0] = 0x1;
-  data[4] = sendData.run;
-  data[5] = sendData.done;
-  data[6] = sendData.reset_ack;
+  data[1] = sendData.run;
+  data[2] = sendData.done;
+  data[3] = sendData.reset_ack;
   
   udp.beginPacket(IPAddress(224, 1, 1, 1), udpSend);
   udp.write(data, sizeof(data));
@@ -669,7 +665,7 @@ void loop() {
   //Serial.println(runclock);
   //Serial.println(reset + " + " + runclock);
   // recieve data
-  if (connected) {
+  //if (connected) {
     int len = udp.parsePacket();
     if (len > 0) {
       Serial.print("src IP: ");
@@ -677,20 +673,17 @@ void loop() {
       Serial.print(";    packet: [");
       char buf[len];
       udp.read(buf, len);
-      //for(int i = 0; i < len; i++){
-      //  Serial.print(buf[i], HEX);
-       // Serial.print(", ");
-      //}
-      //Serial.println(" ");
+      for(int i = 0; i < len; i++){
+        Serial.print(buf[i], HEX);
+        Serial.print(", ");
+      }
+      Serial.println(" ");
 
       //unpack vals. thses might be backward.... 
       recData.startClock  = buf[0]?1:0;
       recData.reset       = buf[1]?1:0;
       recData.pause       = buf[2]?1:0;
       recData.win        += buf[3];
-      recData.win        += buf[4] << 8;
-      recData.win        += buf[5] << 16;
-      recData.win        += buf[6] << 24;
       recData.readyBlue   = buf[7]?1:0;
       recData.readyOrange = buf[8]?1:0;
       recData.orangeTapin = buf[9]?1:0;
@@ -713,11 +706,11 @@ void loop() {
     }
     
 
-  }
+  //}
 
 
   // I think ordering logic on this is is someone won -> do we reset -> is clock running (y -> clocking, n -> yellow)
-  if(millis() - timerVar > 100){
+  if(millis() - timerVar > 300){
 
   
     if( recData.readyBlue ){
@@ -732,16 +725,23 @@ void loop() {
     }
   
   
-    if(reset){
+    if(recData.reset){
       runclock = 0;
       recData.reset = 0;
       setStartClock = 1;
+      //testIntegration(120.0, 0);
+
   
       // whatever other resting the clock stuffff.. (set black ? or ) 
       //send acknak 
+      // Still need to set to black or something...
+      Serial.println("THIS THING I THINK");
       sendData.reset_ack = 1;
       send();
       sendData.reset_ack = 0;
+      send();
+      setAlltoColor(CRGB::Yellow);
+
     
     }
     else if (recData.win != 0){
@@ -767,17 +767,17 @@ void loop() {
         //wth ( as in thiis shpuldent happen)
       }
     }  
-    else if (runclock) {
-      //Serial.println("AHHHHHHHH RUNNNN");
+    else if (recData.startClock) {
+      Serial.println("AHHHHHHHH RUNNNN");
       
-      state = testIntegration(120.00, recData.pause); x
+      state = testIntegration(120.00, recData.pause);
       if ( state == 0 ){// indicating time ==0
         // yellow,  ( I think )
-        setAllToColor(CRGB:Yellow);
+        setAlltoColor(CRGB::Yellow);
         // send done,
         sendData.done = 1;
         runclock = 0;
-        sendData.run = runclock;,
+        sendData.run = runclock;
   
         send();
         delay(200);// just to make sure that the l;aptop gets the jist and I dont just start the clock agian immediatly. ill do somemore logic for this too

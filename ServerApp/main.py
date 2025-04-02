@@ -12,9 +12,9 @@ import os
 
 Gui = gui.GUI()
 
-printOrange = 1
-printBlue = 1
-printClock = 1
+printOrange = 0
+printBlue = 0
+printClock = 0
 
 
 
@@ -90,7 +90,7 @@ rx_sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 def parseData( data ): # im just gonna add an int to all of these
     if(data[0] == 0x1):
         #print("fromClock")
-        fromClock.fromBytes(data[1:])
+        fromClock.fromBytes(data)
         return 1
     elif(data[0] == 0x2):
         #print("fromOrange")
@@ -154,7 +154,7 @@ while not gui.glfw.window_should_close(Gui.window):
         else: # a "real" error occurred print
             sys.exit(1) 
     else: # got a message
-        print("DATATATAT")   
+        #print("DATATATAT")   
         if(len(indata) > 1):
             parseData( indata ) 
     #print("hi?")
@@ -176,6 +176,10 @@ while not gui.glfw.window_should_close(Gui.window):
             toBlue.tap_ack = True
         else:
             toOrange.tap_ack = True
+    print(toClock.reset, fromClock.reset_ack)
+    if(toClock.reset == 1 and fromClock.reset_ack ):
+        toClock.reset = 0
+
     #READYbLUE 
     if (fromBlue.mainPress == 1 and toClock.blueTapin == 1): 
         toClock.readyBlue = 1 
@@ -242,9 +246,9 @@ while not gui.glfw.window_should_close(Gui.window):
     if printBlue == 1:
         s += "(Blue) Color: " + str(toBlue.color) + " | TAP_ACK: " + str(toBlue.tap_ack) + " | main: " + str(toBlue.main_ack) + "\n"
     if printClock == 1:
-        s += "(Clock) Start: " + str(toClock.startClock) + " | rBlue: " + str(toClock.readyBlue) + " | rOrange: " + str(toClock.readyOrange) + " | pause: " + str(toClock.pause) # theres more but il add tase if nessisary
+        s += "(Clock) Start: " + str(toClock.startClock) + " | rBlue: " + str(toClock.readyBlue) + " | rOrange: " + str(toClock.readyOrange) + " | pause: " + str(toClock.pause) + " | reset: " + str(toClock.reset) # theres more but il add tase if nessisary
     if len(s) > 1:
-        os.system('cls')
+        #os.system('cls')
         print(s)
         #print(fromBlue.mainPress)
 gui.self.impl.shutdown()

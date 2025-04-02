@@ -27,7 +27,7 @@ class to_clock_data():
     
     def send(self):
         raw = self.toBytes()
-        self.tx_sock.sendto( raw, (MCAST_GRP, MCAST_PORT_CLOCK))
+        self.tx_sock.sendto( raw, (MCAST_GRP, 5007))
 
 class from_clock_data():
     def __init__(self):
@@ -36,9 +36,10 @@ class from_clock_data():
         self.done = 0
 
     def fromBytes(self, raw):
-        vals = struct.unpack("<???", raw)
-        self.running   = vals[0]
-        self.reset_ack = vals[1]
+        vals = struct.unpack("<????", raw)
+        self.running   = vals[1]
+        self.reset_ack = vals[3]
+        #print(self.reset_ack)
         self.done      = vals[2]
     
     #might write a send funck here for the to witch button stuff, actualy I should do that with aall the sends. 
@@ -81,6 +82,6 @@ class from_button_data():
     def fromBytes(self, raw):
         vals = struct.unpack("<???", raw)
         self.mainPress   = vals[1]
-        print(self.mainPress, "  < ---------")
+        #print(self.mainPress, "  < ---------")
 
         self.tapoutPress = vals[2]
