@@ -157,7 +157,7 @@ void send(){
   data[1] = send_data.main_press;
   data[2] = send_data.tap_press;
   udp.beginPacket(IPAddress(224, 1, 1, 1), 5006);
-  udp.write(data, sizeof(data));
+  udp.write(data, sizeof(char)*3);
   udp.endPacket();
 }
 
@@ -220,9 +220,9 @@ void loop() {
       }
     //}
   //}
-  if(rec_data.main_ack){
-    send_data.main_press = 0;
-  }
+  //if(rec_data.main_ack){
+  //  send_data.main_press = 0;
+  //}
   int tapoutReading = digitalRead(TAPOUT_PIN);
   //if (tapoutReading != lastTapoutState) {
   //  // reset the debouncing timer
@@ -310,7 +310,7 @@ void loop() {
   // Serial.println();
   lastReadyState = readyReading;
   lastTapoutState = tapoutReading;
-  if(millis() - timerVal > 500 && deviceCount > 2){ /// NOTTE I just changed this back from 500 -> 100 so if it dosent get/send data that might be whyyyyyy okay>>>
+  if(millis() - timerVal > 300 && deviceCount > 2){ /// NOTTE I just changed this back from 500 -> 100 so if it dosent get/send data that might be whyyyyyy okay>>>
     Serial.println(send_data.main_press);
     timerVal = millis();
     send();

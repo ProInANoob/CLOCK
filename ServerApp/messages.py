@@ -36,7 +36,7 @@ class from_clock_data():
         self.done = 0
 
     def fromBytes(self, raw):
-        vals = struct.unpack("<????", raw)
+        vals = raw
         self.running   = vals[1]
         self.reset_ack = vals[3]
         #print(self.reset_ack)
@@ -80,8 +80,10 @@ class from_button_data():
         self.tapoutPress = 0
 
     def fromBytes(self, raw):
-        vals = struct.unpack("<???", raw)
+        vals = raw#struct.unpack("<???", raw)
         self.mainPress   = vals[1]
         #print(self.mainPress, "  < ---------")
 
         self.tapoutPress = vals[2]
+
+    

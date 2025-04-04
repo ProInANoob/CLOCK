@@ -414,14 +414,15 @@ void setAlltoColor(struct CRGB color) {
 
 std::vector<int> formatTime(double inputTime) {
     std::vector<int> result(5, 0);  // Initialize vector with five zeros
-    Serial.println("I THINK ITS AROUND HEREEEEEEEEEEEEEEEEEEEEEEEEEEE");
     // Extract minutes and seconds
     int totalSeconds = static_cast<int>(inputTime);
     int minutes = totalSeconds / 60;
     int seconds = totalSeconds % 60;
     // Extract tenths of a second
-    int tenths = static_cast<int>(round((inputTime - totalSeconds) * 10));
+    int tenths = static_cast<int>(floor((inputTime - totalSeconds) * 10));
     // Determine separator: colon (1) for minutes:seconds, decimal (0) for seconds.tenths
+    Serial.println("I THINK ITS AROUND HEREEEEEEEEEEEEEEEEEEEEEEEEEEE");
+
     bool useColon = (totalSeconds >= 10);
     if (useColon) {
         result[0] = minutes / 10;      // First digit of minutes
@@ -559,6 +560,13 @@ int testIntegration(float seconds, bool pause) {
   }
 
   sec = seconds - ((millis() - clockStartTime) / 1000);
+  if(sec <= 0 ){
+      runclock = 0;
+      reset = 1; 
+      setStartClock = 0;
+      return 0;
+    }
+
   Serial.println(sec);
   //for (float sec = seconds; sec >0 ; sec = sec - 0.1) {
     //Serial.print("SECONDS: "); 
@@ -592,26 +600,21 @@ int testIntegration(float seconds, bool pause) {
     changeNumLed(num4leds, "dig1", sec);
 
     //change colon to dash
-    if (vecTime[2]) {
-      leds[48] =  getColor(sec); 
-      leds[47] =  getColor(sec); 
-      leds[46] =  CRGB::Black; 
-    }
-    else {
-      leds[48] =  CRGB::Black; 
-      leds[47] =  CRGB::Black; 
-      leds[46] =  getColor(sec); 
-    }
+    //if (vecTime[2]) {
+    //  leds[48] =  getColor(sec); 
+    //  leds[47] =  getColor(sec); 
+    //  leds[46] =  CRGB::Black; 
+    //}
+    //else {
+    //  leds[48] =  CRGB::Black; 
+    //  leds[47] =  CRGB::Black; 
+    //  leds[46] =  getColor(sec); 
+    //}
     FastLED.show();
     //delay(39);
     //yield();
 
-    if(sec <= 0 ){
-      runclock = 0;
-      reset = 1; 
-      setStartClock = 0;
-      return 0;
-    }
+    
     return 1;
     
 
@@ -683,7 +686,8 @@ void loop() {
       recData.startClock  = buf[0]?1:0;
       recData.reset       = buf[1]?1:0;
       recData.pause       = buf[2]?1:0;
-      recData.win        += buf[3];
+      recData.win        = buf[3];
+      
       recData.readyBlue   = buf[7]?1:0;
       recData.readyOrange = buf[8]?1:0;
       recData.orangeTapin = buf[9]?1:0;
@@ -728,7 +732,8 @@ void loop() {
     if(recData.reset){
       runclock = 0;
       recData.reset = 0;
-      setStartClock = 1;
+      setStartClock = 0;
+      sendData.done = 1;
       //testIntegration(120.0, 0);
 
   
@@ -736,32 +741,34 @@ void loop() {
       //send acknak 
       // Still need to set to black or something...
       Serial.println("THIS THING I THINK");
-      sendData.reset_ack = 1;
-      send();
       sendData.reset_ack = 0;
       send();
-      setAlltoColor(CRGB::Yellow);
+      sendData.reset_ack = 0;
+      setAlltoColor(CRGB::Black);
 
-    
     }
+    
     else if (recData.win != 0){
+      Serial.println(recData.win);
       if(recData.win == 1){
         runclock = 0;
         sendData.run = runclock;
-        setStartClock = 1;
+        setStartClock = 0;
         send();
         // orange win
         //whole clock winnigng color. 
         lightZeroWinnerColor("orange");
+        Serial.println("ORANGEE WINN");
       }
       else if (recData.win == 2) {
         runclock = 0;
         sendData.run = runclock;
-        setStartClock = 1;
+        setStartClock = 0;
         send();  
   
         //blue win
         lightZeroWinnerColor("blue");
+        Serial.println("BLUEE WINNN AN N SNNNIN");
       }
       else{
         //wth ( as in thiis shpuldent happen)
@@ -770,10 +777,10 @@ void loop() {
     else if (recData.startClock) {
       Serial.println("AHHHHHHHH RUNNNN");
       
-      state = testIntegration(120.00, recData.pause);
+      state = testIntegration(181.00, recData.pause);
       if ( state == 0 ){// indicating time ==0
         // yellow,  ( I think )
-        setAlltoColor(CRGB::Yellow);
+        goToBlack();
         // send done,
         sendData.done = 1;
         runclock = 0;
@@ -784,7 +791,7 @@ void loop() {
       } 
   
     }
-  
+    
   }
 
 }

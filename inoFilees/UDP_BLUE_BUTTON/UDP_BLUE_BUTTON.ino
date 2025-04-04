@@ -332,7 +332,7 @@ void loop() {
   // Serial.println();
   lastReadyState = readyReading;
   lastTapoutState = tapoutReading;
-  if((millis() - timerVal) > 500){
+  if((millis() - timerVal) > 1000){
     timerVal = millis();
     send();
   }
