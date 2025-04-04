@@ -73,27 +73,29 @@ class GUI(object):
 
         self.framecount = self.newframecount
         keys = [0, 0, 0, 0, 0] # Otap, Btap, Start ,KO, Pause
-        if glfw.get_key(self.window, glfw.KEY_SPACE) == glfw.PRESS and glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL) == glfw.PRESS :
+        shift = glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT) == glfw.PRESS or  glfw.get_key(self.window, glfw.KEY_RIGHT_SHIFT) == glfw.PRESS 
+        ctrl = glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL) == glfw.PRESS or glfw.get_key(self.window, glfw.KEY_RIGHTs_CONTROL) == glfw.PRESS
+        if glfw.get_key(self.window, glfw.KEY_SPACE) == glfw.PRESS and ctrl  :
             print("CONTROLL SPACEEE!!!! ")
         elif glfw.get_key(self.window, glfw.KEY_SPACE) == glfw.PRESS:
                 print("space press???")
-        if glfw.get_key(self.window, glfw.KEY_F8) == glfw.PRESS and glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL) == glfw.PRESS :
+        if glfw.get_key(self.window, glfw.KEY_F8) == glfw.PRESS and ctrl and shift  :
             print("this is orange tap")
             keys[0] = 1
 
-        if glfw.get_key(self.window, glfw.KEY_F7) == glfw.PRESS and glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL) == glfw.PRESS :
+        if glfw.get_key(self.window, glfw.KEY_F7) == glfw.PRESS and ctrl and shift :
             print("this is blue tap")
             keys[1] = 1
 
-        if glfw.get_key(self.window, glfw.KEY_F10) == glfw.PRESS and glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL) == glfw.PRESS :
+        if glfw.get_key(self.window, glfw.KEY_F10) == glfw.PRESS and ctrl and shift :
             print("this is match start")
             keys[2] = 1
             
-        if glfw.get_key(self.window, glfw.KEY_F11) == glfw.PRESS and glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL) == glfw.PRESS :
+        if glfw.get_key(self.window, glfw.KEY_F11) == glfw.PRESS and ctrl and shift :
             print("this is KO. I have no clue ewitch one. this sucks. why would you do this too meeeee. ")
             keys[3] = 1
 
-        if glfw.get_key(    self.window, glfw.KEY_F12) == glfw.PRESS and glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL) == glfw.PRESS :
+        if glfw.get_key(    self.window, glfw.KEY_F12) == glfw.PRESS and ctrl and shift :
             print("this is pause")
             keys[4] = 1
 
